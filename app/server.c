@@ -69,7 +69,6 @@ int main() {
 
     //parsing the url 
     char readbuffer[1024];
-    char path[512];
     int bytesReceived = recv(fd, readbuffer, sizeof(readbuffer),0);
 
     //parsing with strtok
@@ -77,10 +76,8 @@ int main() {
     readpath = strtok(NULL, " ");
     int byte_sent;
 
-    //create a copy of the url if there is echo
-   // char *cop[512];
-    //strcpy(cop, readpath)
-
+    //parsing for the user-agent part 
+    char *user_agent = readpath;
 
     if(!strcmp(readpath, "/")){
         // Define a simple HTTP 200 OK response message
@@ -90,21 +87,41 @@ int main() {
 
         byte_sent = send(fd, resp_send, strlen(resp_send), 0);
     }
+
+
     else if (!strncmp(readpath, "/echo", strlen("/echo"))){
+        //advance the readpath for the thing to echo
         readpath = readpath + strlen("/echo/");
 
         int cont_len = strlen(readpath);
 
+        //creating a buffer that will be used for snprintf
         char resp_send[1024];
         
+        //using snprintf(buf, max, "%s\n"%s) to try to print and save the different information
         snprintf(resp_send, sizeof(resp_send), "HTTP/1.1 200 OK\r\n" "Content-Type: text/plain\r\n" "Content-Length: %d\r\n\r\n%s", cont_len, readpath);
         
         byte_sent = send(fd, resp_send, strlen(resp_send), 0);
 
-
-
-
     }
+
+
+    else if (!strncmp(readpath, "/user-agent", strlen("/user-agent"))){
+        user_agent = strtok(NULL, "\r\n");
+        user_agent = strtok(NULL, "\r\n");
+        user_agent = strtok(NULL, "\r\n");
+
+        user_agent = user_agent + strlen("User-Agent: ");
+        int user_len = strlen(user_agent);
+
+        char user_rep[1024];
+        
+        snprintf(user_rep, sizeof(user_rep), "HTTP/1.1 200 OK\r\n" "Content-Type: text/plain\r\n" "Content-Length: %d\r\n\r\n%s", user_len, user_agent );
+
+        byte_sent = send(fd, user_rep, strlen(user_rep), 0);
+    }
+
+
     else{
        char *resp_error = "HTTP/1.1 404 Not Found\r\n\r\n";
 
