@@ -77,6 +77,11 @@ int main() {
     readpath = strtok(NULL, " ");
     int byte_sent;
 
+    //create a copy of the url if there is echo
+   // char *cop[512];
+    //strcpy(cop, readpath)
+
+
     if(!strcmp(readpath, "/")){
         // Define a simple HTTP 200 OK response message
 
@@ -85,9 +90,24 @@ int main() {
 
         byte_sent = send(fd, resp_send, strlen(resp_send), 0);
     }
-    else{
-        char *resp_error = "HTTP/1.1 404 Not Found\r\n\r\n";
+    else if (!strncmp(readpath, "/echo", strlen("/echo"))){
+        readpath = readpath + strlen("/echo/");
+
+        int cont_len = strlen(readpath);
+
+        char resp_send[1024];
         
+        snprintf(resp_send, sizeof(resp_send), "HTTP/1.1 200 OK\r\n" "Content-Type: text/plain\r\n" "Content-Length: %d\r\n\r\n%s", cont_len, readpath);
+        
+        byte_sent = send(fd, resp_send, strlen(resp_send), 0);
+
+
+
+
+    }
+    else{
+       char *resp_error = "HTTP/1.1 404 Not Found\r\n\r\n";
+
         byte_sent = send(fd, resp_error, strlen(resp_error), 0 );
     }
 
