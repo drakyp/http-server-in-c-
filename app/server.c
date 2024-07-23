@@ -50,8 +50,12 @@ int main() {
 	 printf("Waiting for a client to connect...\n");
 	 client_addr_len = sizeof(client_addr);
 	
-	 accept(server_fd, (struct sockaddr *) &client_addr, &client_addr_len);
+    //modification for the response 200
+	 int fd = accept(server_fd, (struct sockaddr *) &client_addr, &client_addr_len);
 	 printf("Client connected\n");
+
+    char *resp_send = "HTTP/1.1 200 OK\r\n\r\n";
+    int byte_sent = send(fd, resp_send, strlen(resp_send), 0);
 	
 	 close(server_fd);
 
