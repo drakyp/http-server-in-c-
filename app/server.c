@@ -61,74 +61,96 @@ int main() {
     printf("Waiting for a client to connect...\n");
     // Set client address length
     client_addr_len = sizeof(client_addr);
-    
-    // Accept an incoming client connection
-    int fd = accept(server_fd, (struct sockaddr *) &client_addr, &client_addr_len);
-    // Print a message indicating that a client has connected
-    printf("Client connected\n");
 
-    //parsing the url 
-    char readbuffer[1024];
-    int bytesReceived = recv(fd, readbuffer, sizeof(readbuffer),0);
+    //handling the concurrent connection with a while 1 
+    while (1){
 
-    //parsing with strtok
-    char *readpath = strtok(readbuffer, " ");
-    readpath = strtok(NULL, " ");
-    int byte_sent;
+        // Accept an incoming client connection
+        int fd = accept(server_fd, (struct sockaddr *) &client_addr, &client_addr_len);
+        // Print a message indicating that a client has connected
+        printf("Client connected\n");
 
-    //parsing for the user-agent part 
-    char *user_agent = readpath;
 
-    if(!strcmp(readpath, "/")){
-        // Define a simple HTTP 200 OK response message
+        //creating child process
+        pid_t pid = fork();
 
-        char *resp_send = "HTTP/1.1 200 OK\r\n\r\n";
-        // Send the HTTP response to the client
 
-        byte_sent = send(fd, resp_send, strlen(resp_send), 0);
+        //checking if it is the child we do thing 
+        if(pid == 0){
+
+            //retrieveing the request 
+            char readbuffer[1024];
+            int bytesReceived = recv(fd, readbuffer, sizeof(readbuffer),0);
+
+
+            //parsing with strtok to get the url 
+            char *readpath = strtok(readbuffer, " ");
+            readpath = strtok(NULL, " ");
+            int byte_sent;
+
+            //parsing for the user-agent part 
+            char *user_agent = readpath;
+
+            if(!strcmp(readpath, "/")){
+                // Define a simple HTTP 200 OK response message
+
+                char *resp_send = "HTTP/1.1 200 OK\r\n\r\n";
+                // Send the HTTP response to the client
+
+                byte_sent = send(fd, resp_send, strlen(resp_send), 0);
+            }
+
+
+            else if (!strncmp(readpath, "/echo", strlen("/echo"))){
+                //advance the readpath for the thing to echo
+                readpath = readpath + strlen("/echo/");
+
+                int cont_len = strlen(readpath);
+
+                //creating a buffer that will be used for snprintf
+                char resp_send[1024];
+
+                //using snprintf(buf, max, "%s\n"%s) to try to print and save the different information
+                snprintf(resp_send, sizeof(resp_send), "HTTP/1.1 200 OK\r\n" "Content-Type: text/plain\r\n" "Content-Length: %d\r\n\r\n%s", cont_len, readpath);
+
+                byte_sent = send(fd, resp_send, strlen(resp_send), 0);
+
+            }
+
+
+            else if (!strncmp(readpath, "/user-agent", strlen("/user-agent"))){
+                user_agent = strtok(NULL, "\r\n");
+                user_agent = strtok(NULL, "\r\n");
+                user_agent = strtok(NULL, "\r\n");
+
+                user_agent = user_agent + strlen("User-Agent: ");
+                int user_len = strlen(user_agent);
+
+                char user_rep[1024];
+
+                snprintf(user_rep, sizeof(user_rep), "HTTP/1.1 200 OK\r\n" "Content-Type: text/plain\r\n" "Content-Length: %d\r\n\r\n%s", user_len, user_agent );
+
+                byte_sent = send(fd, user_rep, strlen(user_rep), 0);
+            }
+
+
+            else{
+                char *resp_error = "HTTP/1.1 404 Not Found\r\n\r\n";
+
+                byte_sent = send(fd, resp_error, strlen(resp_error), 0 );
+            }
+        }
+        //parent process 
+        else if ( pid > 0 ){
+            close(fd); // closing the parent process
+        }
+        else{
+            printf(" fork failed bruh");
+        }
+
     }
 
 
-    else if (!strncmp(readpath, "/echo", strlen("/echo"))){
-        //advance the readpath for the thing to echo
-        readpath = readpath + strlen("/echo/");
-
-        int cont_len = strlen(readpath);
-
-        //creating a buffer that will be used for snprintf
-        char resp_send[1024];
-        
-        //using snprintf(buf, max, "%s\n"%s) to try to print and save the different information
-        snprintf(resp_send, sizeof(resp_send), "HTTP/1.1 200 OK\r\n" "Content-Type: text/plain\r\n" "Content-Length: %d\r\n\r\n%s", cont_len, readpath);
-        
-        byte_sent = send(fd, resp_send, strlen(resp_send), 0);
-
-    }
-
-
-    else if (!strncmp(readpath, "/user-agent", strlen("/user-agent"))){
-        user_agent = strtok(NULL, "\r\n");
-        user_agent = strtok(NULL, "\r\n");
-        user_agent = strtok(NULL, "\r\n");
-
-        user_agent = user_agent + strlen("User-Agent: ");
-        int user_len = strlen(user_agent);
-
-        char user_rep[1024];
-        
-        snprintf(user_rep, sizeof(user_rep), "HTTP/1.1 200 OK\r\n" "Content-Type: text/plain\r\n" "Content-Length: %d\r\n\r\n%s", user_len, user_agent );
-
-        byte_sent = send(fd, user_rep, strlen(user_rep), 0);
-    }
-
-
-    else{
-       char *resp_error = "HTTP/1.1 404 Not Found\r\n\r\n";
-
-        byte_sent = send(fd, resp_error, strlen(resp_error), 0 );
-    }
-
-          
     // Close the server socket
     close(server_fd);
 
