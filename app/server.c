@@ -8,16 +8,16 @@
 #include <errno.h>
 #include <unistd.h>
 
-int main() {
+int main(int argc, char *argv[]) {
     // Disable output buffering for stdout and stderr
     setbuf(stdout, NULL);
     setbuf(stderr, NULL);
-    
+
     // Declare variables for server socket and client address length
     int server_fd, client_addr_len;
     // Declare structure to store client address
     struct sockaddr_in client_addr;
-    
+
     // Create a socket using IPv4 (AF_INET) and TCP (SOCK_STREAM)
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
     // Check if socket creation was successful
@@ -26,7 +26,7 @@ int main() {
         printf("Socket creation failed: %s...\n", strerror(errno));
         return 1;
     }
-    
+
     // Setting the SO_REUSEADDR option to avoid "Address already in use" error
     int reuse = 1;
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0) {
@@ -34,21 +34,21 @@ int main() {
         printf("SO_REUSEADDR failed: %s \n", strerror(errno));
         return 1;
     }
-    
+
     // Define server address structure and initialize it
     struct sockaddr_in serv_addr = {
         .sin_family = AF_INET, // IPv4
         .sin_port = htons(4221), // Port number 4221, converted to network byte order
         .sin_addr = { htonl(INADDR_ANY) }, // Accept connections from any IP address
     };
-    
+
     // Bind the socket to the specified address and port
     if (bind(server_fd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) != 0) {
         // Print error message and exit if binding failed
         printf("Bind failed: %s \n", strerror(errno));
         return 1;
     }
-    
+
     // Set the socket to listen for incoming connections with a backlog of 5
     int connection_backlog = 5;
     if (listen(server_fd, connection_backlog) != 0) {
@@ -56,7 +56,7 @@ int main() {
         printf("Listen failed: %s \n", strerror(errno));
         return 1;
     }
-    
+
     // Print a message indicating that the server is waiting for a client to connect
     printf("Waiting for a client to connect...\n");
     // Set client address length
@@ -91,6 +91,10 @@ int main() {
             //parsing for the user-agent part 
             char *user_agent = readpath;
 
+            //int to go to not found in case nothing is found for /files case 
+
+
+            //checking if the url is a /
             if(!strcmp(readpath, "/")){
                 // Define a simple HTTP 200 OK response message
 
@@ -101,6 +105,7 @@ int main() {
             }
 
 
+            //handling the echo case
             else if (!strncmp(readpath, "/echo", strlen("/echo"))){
                 //advance the readpath for the thing to echo
                 readpath = readpath + strlen("/echo/");
@@ -117,7 +122,7 @@ int main() {
 
             }
 
-
+            //handling the user-agent case 
             else if (!strncmp(readpath, "/user-agent", strlen("/user-agent"))){
                 user_agent = strtok(NULL, "\r\n");
                 user_agent = strtok(NULL, "\r\n");
@@ -130,10 +135,136 @@ int main() {
 
                 snprintf(user_rep, sizeof(user_rep), "HTTP/1.1 200 OK\r\n" "Content-Type: text/plain\r\n" "Content-Length: %d\r\n\r\n%s", user_len, user_agent );
 
+
+
                 byte_sent = send(fd, user_rep, strlen(user_rep), 0);
             }
 
 
+            //handling the return of a files
+            else if (!strncmp(readpath, "/files", strlen("/files")))
+            {
+                // Check for --directory flag and get the directory path
+                const char *directory = NULL;
+                if (argc == 3 && strcmp(argv[1], "--directory") == 0) {
+                    directory = argv[2];
+                } else {
+                    fprintf(stderr, "Usage: %s --directory <path>\n", argv[0]);
+                    return 1;
+                }
+
+
+                char filepath[1024];
+                snprintf(filepath, sizeof(filepath), "%s/%s", directory, readpath + strlen("/files/"));
+
+
+                //need to be careful when giving the filepath and not the readpath 
+                
+
+                //check if the file exist and is readable 
+                if(access(filepath, R_OK) == 0)
+                {
+                    //opening the file and reading it 
+                    FILE *file = fopen(filepath, "r");
+                    if (file == NULL) 
+                        perror("Error opening file");
+
+                    // Determine the file size
+                    fseek(file, 0, SEEK_END);
+                    size_t size = ftell(file);
+                    fseek(file, 0, SEEK_SET);
+
+
+                   //buffer to read what is in the file, reading what is in the file and putting it into the buffer 
+                    char rep[1024];
+
+                    //putting what is in the file into the buffer
+                    size_t byteRead = fread( rep, 1, sizeof(rep), file );
+                    fclose(file);
+
+
+                    //checking if we could read the file 
+                    if( byteRead > 0){
+                    //creating a buffer for the response to send into the right format
+                    char rep_send[1024];
+
+                    //trying to printf and putting everything together    
+                    snprintf(rep_send, sizeof(rep_send) ,  "HTTP/1.1 200 OK\r\n" "Content-Type: application/octet-stream\r\n" "Content-Length: %zu\r\n\r\n%s",size, rep );
+
+
+                    byte_sent = send(fd, rep_send, strlen(rep_send), 0);
+                    }
+
+                }
+
+
+                //given by chatgpt
+
+
+/*              // Check for --directory flag and get the directory path
+                const char *directory = NULL;
+                if (argc == 3 && strcmp(argv[1], "--directory") == 0) {
+                    directory = argv[2];
+                } else {
+                    fprintf(stderr, "Usage: %s --directory <path>\n", argv[0]);
+                    return 1;
+                }
+
+                // Construct the full file path
+                char filepath[1024];
+                snprintf(filepath, sizeof(filepath), "%s/%s", directory, readpath + strlen("/files/"));
+
+                // Check if the file exists and is readable
+                if (access(filepath, R_OK) == 0) {
+                    FILE *file = fopen(filepath, "r");
+                    if (file == NULL) {
+                        perror("Error opening file");
+                        close(fd);
+                        continue;
+                    }
+
+                    // Determine the file size
+                    fseek(file, 0, SEEK_END);
+                    size_t size = ftell(file);
+                    fseek(file, 0, SEEK_SET);
+
+                    // Allocate memory and read the file content
+                    char *rep = malloc(size);
+                    if (rep == NULL) {
+                        perror("Error allocating memory");
+                        fclose(file);
+                        close(fd);
+                        continue;
+                    }
+                    size_t byteRead = fread(rep, 1, size, file);
+                    fclose(file);
+
+                    if (byteRead > 0) {
+                        // Send HTTP response headers
+                        dprintf(fd, "HTTP/1.1 200 OK\r\n");
+                        dprintf(fd, "Content-Type: application/octet-stream\r\n");
+                        dprintf(fd, "Content-Length: %zu\r\n", byteRead);
+                        dprintf(fd, "\r\n");
+
+                        // Send the file content
+                        send(fd, rep, byteRead, 0);
+
+                        // Print the file content to stdout (for debugging)
+                        printf("File content:\n%.*s\n", (int)byteRead, rep);
+                    }
+                    free(rep);
+                }*/
+                else {
+                    char *resp_error = "HTTP/1.1 404 Not Found\r\n\r\n";
+
+                    byte_sent = send(fd, resp_error, strlen(resp_error), 0 );
+
+
+                }
+
+            }
+
+            //in case nothing is found return error 404
             else{
                 char *resp_error = "HTTP/1.1 404 Not Found\r\n\r\n";
 
