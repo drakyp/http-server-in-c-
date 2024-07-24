@@ -170,9 +170,9 @@ int main(int argc, char *argv[]) {
                         perror("Error opening file");
 
                     // Determine the file size
-                    fseek(file, 0, SEEK_END);
-                    size_t size = ftell(file);
-                    fseek(file, 0, SEEK_SET);
+                    fseek(file, 0, SEEK_END);// move the pointer at the end of the file to know how many byte are in the file 
+                    size_t size = ftell(file);// tell the current position of the file pointer 
+                    fseek(file, 0, SEEK_SET);// put the file pointer at the start as it was
 
 
                    //buffer to read what is in the file, reading what is in the file and putting it into the buffer 
