@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
 
             //parsing with strtok to get the url 
             char *readpath = strtok(readbuffer, " ");
- int byte_sent;
+            int byte_sent;
 
 
             //check if it is a GET request
@@ -93,38 +93,61 @@ int main(int argc, char *argv[]) {
 
             
             readpath = strtok(NULL, " ");
-           
-            //parsing for the user-agent part 
-            char *user_agent = readpath;
 
-            //int to go to not found in case nothing is found for /files case 
+                //parsing for the user-agent part 
+                char *user_agent = readpath;
 
-
-            //checking if the url is a /
-            if(!strcmp(readpath, "/")){
-                // Define a simple HTTP 200 OK response message
-
-                char *resp_send = "HTTP/1.1 200 OK\r\n\r\n";
-                // Send the HTTP response to the client
-
-                byte_sent = send(fd, resp_send, strlen(resp_send), 0);
-            }
+                //int to go to not found in case nothing is found for /files case 
 
 
-            //handling the echo case
-            else if (!strncmp(readpath, "/echo", strlen("/echo"))){
-                //advance the readpath for the thing to echo
-                readpath = readpath + strlen("/echo/");
+                //checking if the url is a /
+                if(!strcmp(readpath, "/")){
+                    // Define a simple HTTP 200 OK response message
 
-                int cont_len = strlen(readpath);
+                    char *resp_send = "HTTP/1.1 200 OK\r\n\r\n";
+                    // Send the HTTP response to the client
 
-                //creating a buffer that will be used for snprintf
-                char resp_send[1024];
+                    byte_sent = send(fd, resp_send, strlen(resp_send), 0);
+                }
 
-                //using snprintf(buf, max, "%s\n"%s) to try to print and save the different information
-                snprintf(resp_send, sizeof(resp_send), "HTTP/1.1 200 OK\r\n" "Content-Type: text/plain\r\n" "Content-Length: %d\r\n\r\n%s", cont_len, readpath);
 
-                byte_sent = send(fd, resp_send, strlen(resp_send), 0);
+                //handling the echo case
+                else if (!strncmp(readpath, "/echo", strlen("/echo"))){
+
+                    // advance the readpath for the thing to echo
+                    readpath = readpath + strlen("/echo/");
+
+                    int cont_len = strlen(readpath);
+                    char resp_send[1024];
+
+                    char *check_accept;
+                    char *accept_encoding = NULL;
+                    while ((check_accept = strtok(NULL, "\r\n")) != NULL) {
+                        if (!strncmp(check_accept, "Accept-Encoding: ", strlen("Accept-Encoding: "))) {
+                            accept_encoding = check_accept + strlen("Accept-Encoding: ");
+                            break;
+                        }
+                    }
+
+                    // creating a buffer that will be used for snprintf
+                    if (accept_encoding && !strncmp(accept_encoding, "gzip", strlen("gzip"))) {
+                        // using snprintf(buf, max, "%s\n"%s) to try to print and save the different information
+                        snprintf(resp_send, sizeof(resp_send), 
+                                 "HTTP/1.1 200 OK\r\n"
+                                 "Content-Type: text/plain\r\n"
+                                 "Content-Encoding: gzip\r\n"
+                                 "Content-Length: %d\r\n\r\n%s", 
+                                 cont_len, readpath);
+                    } else {
+                        // using snprintf(buf, max, "%s\n"%s) to try to print and save the different information
+                        snprintf(resp_send, sizeof(resp_send), 
+                                 "HTTP/1.1 200 OK\r\n"
+                                 "Content-Type: text/plain\r\n"
+                                 "Content-Length: %d\r\n\r\n%s", 
+                                 cont_len, readpath);
+                    }
+
+                    byte_sent = send(fd, resp_send, strlen(resp_send), 0);
 
             }
 
