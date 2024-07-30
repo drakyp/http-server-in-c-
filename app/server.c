@@ -129,6 +129,12 @@ int main(int argc, char *argv[]) {
                         }
                     }
 
+                    while ((accept_encoding = strtok(NULL, ",")) != NULL){
+                        if(!strncmp(accept_encoding, "gzip", strlen("gzip")){
+                           break;                            
+                        }
+                    }
+
                     // creating a buffer that will be used for snprintf
                     if (accept_encoding && !strncmp(accept_encoding, "gzip", strlen("gzip"))) {
                         // using snprintf(buf, max, "%s\n"%s) to try to print and save the different information
