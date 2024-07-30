@@ -309,7 +309,7 @@ int main(int argc, char *argv[]) {
                 //creating a buffer for the content and retrieving the content to put into the buffer
                 char content[1024];
                 readpath = strtok(NULL, "\r\n");
- readpath = strtok(NULL, "\r\n\r\n");
+                readpath = strtok(NULL, "\r\n\r\n");
                 readpath = strtok(NULL, "\r\n\r\n");
                 readpath = strtok(NULL, "\r\n");
                 readpath = strtok(NULL, "\n");
@@ -321,8 +321,8 @@ int main(int argc, char *argv[]) {
                 fwrite(readpath, 1, strlen(readpath), file_post);
                 fclose(file_post);
                 //send with the format the respond
- char *rep_post = "HTTP/1.1 201 Created\r\n\r\n";
-    int byte_sent = send(fd, rep_post, strlen(rep_post), 0);
+                char *rep_post = "HTTP/1.1 201 Created\r\n\r\n";
+                int byte_sent = send(fd, rep_post, strlen(rep_post), 0);
 
 
                    
