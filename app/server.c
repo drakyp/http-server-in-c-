@@ -122,6 +122,7 @@ int main(int argc, char *argv[]) {
 
                     char *check_accept;
                     char *accept_encoding = NULL;
+                    char *accept = NULL;
                     while ((check_accept = strtok(NULL, "\r\n")) != NULL) {
                         if (!strncmp(check_accept, "Accept-Encoding: ", strlen("Accept-Encoding: "))) {
                             accept_encoding = check_accept + strlen("Accept-Encoding: ");
@@ -129,14 +130,21 @@ int main(int argc, char *argv[]) {
                         }
                     }
 
-                    while ((accept_encoding = strtok(NULL, ",")) != NULL){
-                        if(!strncmp(accept_encoding, "gzip", strlen("gzip")){
-                           break;                            
+                    int ok_gzip = 0;
+                    if (accept_encoding){
+                        //Parse the list of encoding method 
+                        char *encoding = strtok(accept_encoding, ", ");
+                        while (encoding != NULL){
+                            if(!strncmp(encoding, "gzip", strlen("gzip"))){
+                                ok_gzip = 1;
+                                break;
+                            }
+                            encoding = strtok(NULL, ", ");
                         }
-                    }
+                    } 
 
                     // creating a buffer that will be used for snprintf
-                    if (accept_encoding && !strncmp(accept_encoding, "gzip", strlen("gzip"))) {
+                    if (ok_gzip) {
                         // using snprintf(buf, max, "%s\n"%s) to try to print and save the different information
                         snprintf(resp_send, sizeof(resp_send), 
                                  "HTTP/1.1 200 OK\r\n"
