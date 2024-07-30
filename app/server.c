@@ -7,6 +7,32 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <zlib.h>
+
+
+int compress_gzip(const char *src, size_t src_len, char *dest, size_t *dest_len) {
+    z_stream zs;
+    memset(&zs, 0, sizeof(zs));
+    
+    if (deflateInit2(&zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY) != Z_OK) {
+        return -1;
+    }
+
+    zs.next_in = (Bytef *)src;
+    zs.avail_in = src_len;
+    zs.next_out = (Bytef *)dest;
+    zs.avail_out = *dest_len;
+
+    int ret = deflate(&zs, Z_FINISH);
+    if (ret != Z_STREAM_END) {
+        deflateEnd(&zs);
+        return -1;
+    }
+
+    *dest_len = zs.total_out;
+    deflateEnd(&zs);
+    return 0;
+}
 
 int main(int argc, char *argv[]) {
     // Disable output buffering for stdout and stderr
@@ -145,13 +171,22 @@ int main(int argc, char *argv[]) {
 
                     // creating a buffer that will be used for snprintf
                     if (ok_gzip) {
+
+                        char compress[1024];
+                        size_t compress_len = sizeof(compress);
+                        if( !compress_gzip(readpath, cont_len, compress, &compress_len)){
+
+                        
                         // using snprintf(buf, max, "%s\n"%s) to try to print and save the different information
                         snprintf(resp_send, sizeof(resp_send), 
                                  "HTTP/1.1 200 OK\r\n"
                                  "Content-Type: text/plain\r\n"
                                  "Content-Encoding: gzip\r\n"
-                                 "Content-Length: %d\r\n\r\n%s", 
-                                 cont_len, readpath);
+                                 "Content-Length: %zu\r\n\r\n", 
+                                 compress_len);
+                            send(fd, resp_send, strlen(resp_send), 0);
+                send(fd, compress, compress_len, 0);
+                        }
                     } else {
                         // using snprintf(buf, max, "%s\n"%s) to try to print and save the different information
                         snprintf(resp_send, sizeof(resp_send), 
