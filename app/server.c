@@ -85,9 +85,15 @@ int main(int argc, char *argv[]) {
 
             //parsing with strtok to get the url 
             char *readpath = strtok(readbuffer, " ");
-            readpath = strtok(NULL, " ");
-            int byte_sent;
+ int byte_sent;
 
+
+            //check if it is a GET request
+            if (!strncmp(readpath, "GET", strlen("GET"))){
+
+            
+            readpath = strtok(NULL, " ");
+           
             //parsing for the user-agent part 
             char *user_agent = readpath;
 
@@ -269,6 +275,63 @@ int main(int argc, char *argv[]) {
                 char *resp_error = "HTTP/1.1 404 Not Found\r\n\r\n";
 
                 byte_sent = send(fd, resp_error, strlen(resp_error), 0 );
+            }
+            }
+            else{
+
+                readpath = strtok(NULL, " ");
+                // Check for --directory flag and get the directory path
+                const char *directory = NULL;
+                if (argc == 3 && strcmp(argv[1], "--directory") == 0) {
+                    directory = argv[2];
+                } else {
+                    fprintf(stderr, "Usage: %s --directory <path>\n", argv[0]);
+                    return 1;
+                }
+
+                //finding the good directory to create and put the file 
+                char *filename = readpath + strlen("/files/");
+
+                char filepath[1024];
+                snprintf(filepath, sizeof(filepath), "%s/%s", directory, filename);
+                
+                 /*
+         
+                //retrieving the number of character needed 
+                readpath = strtok(NULL, "\r\n");
+                readpath = strtok(NULL, "\r\n");
+                readpath = strtok(NULL, "\r\n");
+
+                int content_length = atoi(readpath + strlen("Content-Length: "));
+                */
+
+
+                //creating a buffer for the content and retrieving the content to put into the buffer
+                char content[1024];
+                readpath = strtok(NULL, "\r\n");
+ readpath = strtok(NULL, "\r\n\r\n");
+                readpath = strtok(NULL, "\r\n\r\n");
+                readpath = strtok(NULL, "\r\n");
+                readpath = strtok(NULL, "\n");
+                readpath = strtok(NULL, "" );
+
+                //creating the file in the right place 
+                FILE *file_post = fopen(filepath, "w");
+                //putting the content into the file
+                fwrite(readpath, 1, strlen(readpath), file_post);
+                fclose(file_post);
+                //send with the format the respond
+ char *rep_post = "HTTP/1.1 201 Created\r\n\r\n";
+    int byte_sent = send(fd, rep_post, strlen(rep_post), 0);
+
+
+                   
+                
+
+
+
+
+
             }
         }
         //parent process 
